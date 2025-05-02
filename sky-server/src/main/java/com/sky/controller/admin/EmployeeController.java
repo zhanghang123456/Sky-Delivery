@@ -90,4 +90,20 @@ public class EmployeeController {
         return Result.success(pageResult);
     }
 
+    /**
+     * 启用禁用员工账号
+     * 由于这里不是查询类型的方法无需放回数据库中数据因此可以Result无需使用泛型
+     * /admin/employee/status/{status}且{status}这里为路径参数(变量)因此无需使用DTO
+     * @param id
+     * @param status
+     * @return
+     */
+    @PostMapping("/status/{status}")
+    @ApiOperation("启用禁用员工账号")
+    public Result startOrStop(@PathVariable Integer status, Long id){
+        log.info("修改员工状态：{}，{}", id, status);
+        employeeService.startOrStop(id, status);
+        return Result.success();
+    }
+
 }

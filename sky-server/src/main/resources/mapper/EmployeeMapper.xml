@@ -13,4 +13,22 @@
         </where>
         order by create_time desc
     </select>
+
+    <!--resultType="Employee" 中参数类型的书写可以不为完整路径，前提是要在application.yml中
+    的mybatis配置项中配置过完整扫描路径 -->
+    <update id="update" parameterType="Employee">
+        update employee
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="username != null">username = #{username}, </if>
+            <if test="password != null">password = #{password}, </if>
+            <if test="phone != null">phone = #{phone}, </if>
+            <if test="sex != null">sex = #{sex},</if>
+            <if test="idNumber != null">id_number = #{idNumber},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="updateUser != null">update_user = #{updateUser},</if>
+            <if test="status != null">status = #{status}</if>
+        </set>
+        where id = #{id}
+    </update>
 </mapper>
