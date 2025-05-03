@@ -49,6 +49,7 @@ public class JwtTokenAdminInterceptor implements HandlerInterceptor {
             Long empId = Long.valueOf(claims.get(JwtClaimsConstant.EMP_ID).toString());
             log.info("当前员工id：", empId);
             //BaseContext是threadLocal的封装类，而threadLocal为每个单独线程提供存储空间，而每一次请求都是一个单独的线程，因此可以用此方法来传递变量
+            //当前用户的每一次请求都会被拦截器拦截，因此可以在此处获取到当前用户的id
             BaseContext.setCurrentId(empId);
             //3、通过，放行
             return true;

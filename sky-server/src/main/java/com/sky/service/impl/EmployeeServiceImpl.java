@@ -5,6 +5,7 @@ import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.constant.PasswordConstant;
 import com.sky.constant.StatusConstant;
+import com.sky.context.BaseContext;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
@@ -76,7 +77,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         Employee employee = new Employee();
 
-        //下面Spring框架提供的工具可以直接将完成全部对象属性的拷贝，而无需一个复制
+        //下面Spring框架提供的工具可以直接将完成全部对象属性的拷贝，而无需依个复制
         BeanUtils.copyProperties(employeeDTO, employee); //该方法第一个参数为资源，第二个参数为目标
 
         //以下为Employee类中有而DTO中没有的属性，需要手动设置
@@ -91,9 +92,8 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setUpdateTime(LocalDateTime.now());
 
         //设置当前记录人创建人的id和修改人id
-        //TODO 后期需要修改当前登录用户的id(动态创建)
-        employee.setCreateUser(10L);
-        employee.setUpdateUser(10L);
+        employee.setCreateUser(BaseContext.getCurrentId());
+        employee.setUpdateUser(BaseContext.getCurrentId());
 
         employeeMapper.insert(employee);
     }
@@ -135,5 +135,44 @@ public class EmployeeServiceImpl implements EmployeeService {
                 build();
         employeeMapper.update(employee);
     }
+
+    /**
+     * 根据id查询员工
+     * @param id
+     * @return
+     */
+    public Employee getById(Long id) {
+        Employee employee = employeeMapper.getById(id);
+
+        //进一步对返回密码进行隐匿
+        employee.setPassword("*****");
+        return employee;
+    }
+
+
+    /**
+     * * 编辑员工信息
+     * * @param employeeDTO
+     */
+    public void update(EmployeeDTO employeeDTO) {
+
+        Employee employee =  new Employee();
+
+        //将需要修改的信息复制到实体类中
+        BeanUtils.copyProperties(employeeDTO, employee);
+
+        //设置修改时间
+        employee.setUpdateTime(LocalDateTime.now());
+
+        //设置修改人id
+        employee.setUpdateUser(BaseContext.getCurrentId());
+
+        employeeMapper.update(employee);
+
+    }
+
+
+
+
 
 }
