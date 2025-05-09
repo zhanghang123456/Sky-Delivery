@@ -65,4 +65,20 @@ public interface DishMapper {
      */
     @AutoFill(OperationType.UPDATE)
     void update(Dish dish);
+
+    /**
+     * 根据分类id查询菜品列表
+     * @param categoryId
+     * @return
+     */
+    @Select("select * from dish where category_id = #{categoryId}")
+    List<Dish> listByCategoryId(Long categoryId);
+
+    /**
+     * 根据套餐id查询菜品
+     * @param setmealId
+     * @return
+     */
+    @Select("select d.* from dish d left outer join setmeal_dish s on d.id = s.dish_id where s.setmeal_id = #{setmealId}")
+    List<Dish> getBySetmealId(Long setmealId);
 }

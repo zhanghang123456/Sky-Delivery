@@ -9,22 +9,19 @@ import com.sky.dto.DishPageQueryDTO;
 import com.sky.entity.Dish;
 import com.sky.entity.DishFlavor;
 import com.sky.entity.Setmeal;
-import com.sky.entity.SetmealDish;
 import com.sky.exception.DeletionNotAllowedException;
 import com.sky.mapper.DishFlavorMapper;
 import com.sky.mapper.DishMapper;
 import com.sky.mapper.SetMealDishMapper;
-import com.sky.mapper.SetmealMapper;
+import com.sky.mapper.SetMealMapper;
 import com.sky.result.PageResult;
 import com.sky.service.DishService;
 import com.sky.vo.DishVO;
-import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +40,7 @@ public class DishServiceImpl implements DishService {
     private SetMealDishMapper setMealDishMapper;
 
     @Autowired
-    private SetmealMapper setmealMapper;
+    private SetMealMapper setMealMapper;
 
     /**
      * 新增菜品以及对应的口味
@@ -213,7 +210,7 @@ public class DishServiceImpl implements DishService {
                             .id(setMealId)
                             .status(status)
                             .build();
-                    setmealMapper.update(setMeal);
+                    setMealMapper.update(setMeal);
                 }
             }
 
@@ -222,6 +219,15 @@ public class DishServiceImpl implements DishService {
         }
 
 
+    }
+
+    /**
+     * 根据分类id查询菜品
+     * @param categoryId
+     * @return
+     */
+    public List<Dish> listByCategoryId(Long categoryId) {
+        return dishMapper.listByCategoryId(categoryId);
     }
 
 

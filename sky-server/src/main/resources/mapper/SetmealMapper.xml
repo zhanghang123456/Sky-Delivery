@@ -1,35 +1,33 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.sky.mapper.SetmealMapper">
-<!--    使用useGeneratedKeys="true" 能够获取到刚刚插入的那条记录所生成的自增主键的值 keyProperty="id" 将获取到的自增主键值设置到传入的参数对象（通常是一个 JavaBean 实体类）的哪个属性中。-->
+<mapper namespace="com.sky.mapper.SetMealMapper">
     <insert id="insert" parameterType="Setmeal" useGeneratedKeys="true" keyProperty="id">
-        insert into dish (name, category_id, price, image, description, create_time, update_time, create_user, update_user, status)
-        values (#{name}, #{categoryId}, #{price}, #{image}, #{description}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser}, #{status})
+        insert into setmeal (category_id, name, price, image, description, status, create_time, update_time, create_user, update_user)
+        values (#{categoryId}, #{name}, #{price}, #{image}, #{description}, #{status}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
     </insert>
 
 
-<!--    <select id="pageQuery" resultType="com.sky.vo.DishVO">-->
-<!--        select d.*, c.name as categoryName from dish d left outer join category c on d.category_id = c.id-->
-<!--        <where>-->
-<!--            <if test="name != null and name != ''">-->
-<!--                and d.name like concat('%', #{name}, '%')-->
-<!--            </if>-->
-<!--            <if test="categoryId != null">-->
-<!--                and d.category_id = #{categoryId}-->
-<!--            </if>-->
-<!--            <if test="status != null">-->
-<!--                and d.status = #{status}-->
-<!--            </if>-->
+    <select id="pageQuery" resultType="com.sky.vo.SetmealVO">
+        select s.*, c.name as category_name from setmeal s left outer join category c on s.category_id = c.id
+        <where>
+            <if test="name != null and name != ''">
+                and s.name like concat('%', #{name}, '%')
+            </if>
+            <if test="categoryId != null">
+                and s.category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                and s.status = #{status}
+            </if>
+        </where>
+        order by s.create_time desc
+    </select>
 
-<!--        </where>-->
-<!--        order by d.create_time desc-->
-<!--    </select>-->
-
-<!--    <delete id="deleteByIds">-->
-<!--        delete from dish where id in-->
-<!--        <foreach collection="ids" item="id" separator="," open="("  close=")">#{id}</foreach>-->
-<!--    </delete>-->
+    <delete id="deleteByIds">
+        delete from setmeal where id in
+        <foreach collection="ids" item="id" separator="," open="("  close=")">#{id}</foreach>
+    </delete>
 
     <update id="update">
         update setmeal

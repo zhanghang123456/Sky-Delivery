@@ -80,6 +80,19 @@ public class DishController {
     }
 
     /**
+     * 根据分类id查询菜品列表
+     * @param categoryId
+     * @return
+     */
+    @GetMapping("/list")
+    @ApiOperation("根据分类id查询菜品列表")
+    public Result<List<Dish>> listByCategoryId(Long categoryId){
+        log.info("根据分类id查询菜品列表:{}",categoryId);
+        List<Dish> dishes= dishService.listByCategoryId(categoryId);
+        return Result.success(dishes);
+    }
+
+    /**
      * 修改菜品信息
      * @param dishDTO
      * @return
@@ -99,4 +112,6 @@ public class DishController {
         dishService.startOrStop(status, id);
         return Result.success();
     }
+
+
 }
