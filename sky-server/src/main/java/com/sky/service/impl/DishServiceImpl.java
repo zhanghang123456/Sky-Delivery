@@ -8,10 +8,13 @@ import com.sky.dto.DishDTO;
 import com.sky.dto.DishPageQueryDTO;
 import com.sky.entity.Dish;
 import com.sky.entity.DishFlavor;
+import com.sky.entity.Setmeal;
+import com.sky.entity.SetmealDish;
 import com.sky.exception.DeletionNotAllowedException;
 import com.sky.mapper.DishFlavorMapper;
 import com.sky.mapper.DishMapper;
 import com.sky.mapper.SetMealDishMapper;
+import com.sky.mapper.SetmealMapper;
 import com.sky.result.PageResult;
 import com.sky.service.DishService;
 import com.sky.vo.DishVO;
@@ -23,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -37,6 +41,9 @@ public class DishServiceImpl implements DishService {
 
     @Autowired
     private SetMealDishMapper setMealDishMapper;
+
+    @Autowired
+    private SetmealMapper setmealMapper;
 
     /**
      * 新增菜品以及对应的口味
@@ -178,6 +185,43 @@ public class DishServiceImpl implements DishService {
             dishFlavorMapper.insertBatch(flavors);
 
         }
+    }
+
+    /**
+     * 启售禁售菜品
+     * @param status
+     * @param id
+     */
+    public void startOrStop(Integer status, Long id) {
+
+        //利用Bulider构建器构建dish对象,因为update方法需要传入dish对象
+        Dish dish = Dish.builder()
+                .id(id)
+                .status(status)
+                .build();
+        dishMapper.update(dish);
+
+        //如果是停售操作，需要将包含该菜品的套餐也停售
+        if(status.equals(StatusConstant.DISABLE)){
+            List<Long> dishIds = new ArrayList<>();
+            dishIds.add(id);
+            List<Long> setMealIds = setMealDishMapper.getSetMealIdsByDishIds(dishIds);
+//            List<Setmeal> setMeals = new ArrayList<>(); 逻辑简化：如果只是采用依个更新的方法的话，没必要将setMeal对象添加进集合中
+            if(setMealIds != null && !setMealIds.isEmpty()){
+                for (Long setMealId : setMealIds) {
+                    Setmeal setMeal = Setmeal.builder()
+                            .id(setMealId)
+                            .status(status)
+                            .build();
+                    setmealMapper.update(setMeal);
+                }
+            }
+
+
+
+        }
+
+
     }
 
 
