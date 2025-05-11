@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.UserMapper">
+<!--    使用useGeneratedKeys="true" 能够获取到刚刚插入的那条记录所生成的自增主键的值 keyProperty="id" 将获取到的自增主键值设置到传入的参数对象（通常是一个 JavaBean 实体类）的哪个属性中。-->
+    <insert id="insert"  useGeneratedKeys="true" keyProperty="id">
+        insert into user (openid, name, phone, sex, id_number, avatar, create_time)
+        values (#{openid}, #{name}, #{phone}, #{sex}, #{idNumber}, #{avatar}, now())
+    </insert>
+
+
+</mapper>
