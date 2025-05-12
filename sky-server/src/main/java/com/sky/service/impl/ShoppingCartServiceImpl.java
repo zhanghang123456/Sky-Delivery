@@ -102,13 +102,15 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 
         List<ShoppingCart> list = shoppingCartMapper.list(shoppingCart);
 
-        ShoppingCart shoppingCart1 = list.get(0);
-        //如果数量为1，则删除
-        if (shoppingCart1.getNumber() == 1) {
-            shoppingCartMapper.deleteById(shoppingCart1.getId());
-        }else {
-            shoppingCart1.setNumber(shoppingCart1.getNumber() - 1);
-            shoppingCartMapper.updateNumberById(shoppingCart1);
+        if(list != null && !list.isEmpty()){
+            ShoppingCart shoppingCart1 = list.get(0);
+            //如果数量为1，则删除
+            if (shoppingCart1.getNumber() == 1) {
+                shoppingCartMapper.deleteById(shoppingCart1.getId());
+            }else {
+                shoppingCart1.setNumber(shoppingCart1.getNumber() - 1);
+                shoppingCartMapper.updateNumberById(shoppingCart1);
+            }
         }
 
     }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.OrderDetailMapper">
+<!--    使用useGeneratedKeys="true" 能够获取到刚刚插入的那条记录所生成的自增主键的值 keyProperty="id" 将获取到的自增主键值设置到传入的参数对象（通常是一个 JavaBean 实体类）的哪个属性中。-->
+    <insert id="insertBatch">
+        insert into order_detail (name, image, order_id, dish_id, setmeal_id, dish_flavor, number, amount)
+        values
+        <foreach collection="orderDetails" item="orderDetail" separator=",">
+            (#{orderDetail.name}, #{orderDetail.image}, #{orderDetail.orderId}, #{orderDetail.dishId}, #{orderDetail.setmealId}, #{orderDetail.dishFlavor}, #{orderDetail.number}, #{orderDetail.amount})
+        </foreach>
+    </insert>
+
+
+</mapper>
