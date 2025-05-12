@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.ShoppingCartMapper">
+<!--    使用useGeneratedKeys="true" 能够获取到刚刚插入的那条记录所生成的自增主键的值 keyProperty="id" 将获取到的自增主键值设置到传入的参数对象（通常是一个 JavaBean 实体类）的哪个属性中。-->
+<!--    <insert id="insert" parameterType="Dish" useGeneratedKeys="true" keyProperty="id">-->
+<!--        insert into dish (name, category_id, price, image, description, create_time, update_time, create_user, update_user, status)-->
+<!--        values (#{name}, #{categoryId}, #{price}, #{image}, #{description}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser}, #{status})-->
+<!--    </insert>-->
+
+
+    <select id="list" parameterType="ShoppingCart" resultType="ShoppingCart">
+        select * from shopping_cart
+        <where>
+            <if test="userId != null">
+                and user_id = #{userId}
+            </if>
+            <if test="dishId != null">
+                and dish_id = #{dishId}
+            </if>
+            <if test="setmealId != null">
+                and setmeal_id = #{setmealId}
+            </if>
+            <if test="dishFlavor != null">
+                and dish_flavor = #{dishFlavor}
+            </if>
+        </where>
+    </select>
+</mapper>
