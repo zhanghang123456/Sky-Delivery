@@ -1,6 +1,7 @@
 package com.sky.service.impl;
 
 import com.alibaba.druid.support.json.JSONUtils;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
@@ -10,10 +11,15 @@ import com.sky.context.BaseContext;
 import com.sky.dto.*;
 import com.sky.entity.*;
 import com.sky.exception.AddressBookBusinessException;
+import com.sky.exception.AmapBusinessException;
+import com.sky.exception.OrderBusinessException;
 import com.sky.exception.ShoppingCartBusinessException;
 import com.sky.mapper.*;
+import com.sky.properties.AmapProperties;
+import com.sky.properties.ShopProperties;
 import com.sky.result.PageResult;
 import com.sky.service.OrderService;
+import com.sky.utils.HttpClientUtil;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
@@ -28,10 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -54,6 +58,14 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private WeChatPayUtil weChatPayUtil;
 
+    @Autowired
+    private ShopProperties shopProperties;
+
+    @Autowired
+    private AmapProperties amapProperties;
+
+    private static final Long DISTANCE = 5000L;
+
     /**
      * 提交订单
      * @param ordersSubmitDTO
@@ -67,6 +79,25 @@ public class OrderServiceImpl implements OrderService {
         AddressBook addressBook = addressBookMapper.getById(ordersSubmitDTO.getAddressBookId());
         if (addressBook == null) {
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
+        }
+
+        //判断用户地址与商户地址是否超过一定的距离
+        String user_address = addressBook.getProvinceName() + addressBook.getCityName()
+                + addressBook.getDistrictName() + addressBook.getDetail();
+        String shop_location = getGeocode(shopProperties.getAddress());
+        String user_location = getGeocode(user_address);
+        if(shop_location != null && user_location != null) {
+            String distanceStr = getDistance(shop_location, user_location);
+            if (distanceStr == null) {
+                throw new OrderBusinessException(MessageConstant.DISTANCE_EXCEEDS_LIMIT);
+            }else {
+                Long distance = Long.valueOf(distanceStr);
+                if (distance > DISTANCE){
+                    throw new OrderBusinessException(MessageConstant.DISTANCE_EXCEEDS_LIMIT);
+                }
+            }
+        }else {
+            throw new OrderBusinessException(MessageConstant.GEOCODE_ANALYSIS_ANOMALY);
         }
 
         Long userId = BaseContext.getCurrentId();
@@ -118,6 +149,45 @@ public class OrderServiceImpl implements OrderService {
         return orderSubmitVO;
     }
 
+    private String getGeocode(String address) {
+        Map<String, String> map = new HashMap<>();
+        map.put("key", amapProperties.getKey());
+        map.put("address", address);
+        String json = HttpClientUtil.doGet(amapProperties.getGeocodeUrl(), map);
+        JSONObject jsonObject = JSONObject.parseObject(json);
+        if (jsonObject != null && "1".equals(jsonObject.getString("status"))) {
+            JSONArray geocodes = jsonObject.getJSONArray("geocodes");
+            if (geocodes != null && !geocodes.isEmpty()) {
+                JSONObject firstJsonObject = geocodes.getJSONObject(0);
+                if (firstJsonObject != null) {
+                    return firstJsonObject.getString("location");
+                }
+            }
+        }
+        return null;
+    }
+
+    private String getDistance(String origin, String destination) {
+        Map<String, String> map = new HashMap<>();
+        map.put("key", amapProperties.getKey());
+        map.put("origin", origin);
+        map.put("destination", destination);
+        String json = HttpClientUtil.doGet(amapProperties.getDirectionUrl(), map);
+        JSONObject jsonObject = JSONObject.parseObject(json);
+        if (jsonObject != null && "1".equals(jsonObject.getString("status"))) {
+            JSONObject route = jsonObject.getJSONObject("route");
+            if (route != null) {
+                JSONArray paths = route.getJSONArray("paths");
+                if (paths != null && !paths.isEmpty()) {
+                    JSONObject firstJsonObject = paths.getJSONObject(0);
+                    if( firstJsonObject != null){
+                        return firstJsonObject.getString("distance");
+                    }
+                }
+            }
+        }
+        return null;
+    }
     /**
      * 订单支付
      *
@@ -232,15 +302,24 @@ public class OrderServiceImpl implements OrderService {
 
         List<OrderDetail> orderDetailList = orderDetailMapper.getOrderDetailById(id);
 
-        List<ShoppingCart> shoppingCartList = new ArrayList<>();
+//        List<ShoppingCart> shoppingCartList = new ArrayList<>();
+//
+//        for (OrderDetail orderDetail : orderDetailList) {
+//            ShoppingCart shoppingCart = new ShoppingCart();
+//            BeanUtils.copyProperties(orderDetail, shoppingCart);
+//            shoppingCart.setUserId(BaseContext.getCurrentId());
+//            shoppingCart.setCreateTime(LocalDateTime.now());
+//            shoppingCartList.add(shoppingCart);
+//        }
 
-        for (OrderDetail orderDetail : orderDetailList) {
+        //方式二：利用Stream API完成orderDetailList集合到shoppingCartList集合的转换
+        List<ShoppingCart> shoppingCartList = orderDetailList.stream().map(x -> {
             ShoppingCart shoppingCart = new ShoppingCart();
-            BeanUtils.copyProperties(orderDetail, shoppingCart);
+            BeanUtils.copyProperties(x, shoppingCart, "id"); //第三个参数用于指定排除项，也就是这里在复制时会排除掉id属性
             shoppingCart.setUserId(BaseContext.getCurrentId());
             shoppingCart.setCreateTime(LocalDateTime.now());
-            shoppingCartList.add(shoppingCart);
-        }
+            return shoppingCart;
+        }).collect(Collectors.toList());
 
         shoppingCartMapper.insertBatch(shoppingCartList);
 
@@ -262,39 +341,61 @@ public class OrderServiceImpl implements OrderService {
                 OrderVO orderVO = new OrderVO();
                 BeanUtils.copyProperties(orders, orderVO);
                 List<OrderDetail> orderDetailList = orderDetailMapper.getOrderDetailById(orders.getId());
-                StringBuilder sb = new StringBuilder(); //利用StringBuilder比使用加号更加高效
-                Boolean first = true;
-//                orderVO.setOrderDetailList(orderDetailList);
 
-               if (orderDetailList != null && !orderDetailList.isEmpty()) {
-                   for (OrderDetail orderDetail : orderDetailList) {
-                       if (orderDetail != null && orderDetail.getName() != null) {
-                           if (!first){
-                               sb.append(",");
-                           }
-                           sb.append(orderDetail.getName());
-                           first = false;
-                       }
-                   }
-               }
-               orderVO.setOrderDishes(sb.toString()); //sb.toString()将StringBuilder转换为最终的String
-               orderVOList.add(orderVO);
+                orderVO.setOrderDetailList(orderDetailList);
+//               StringBuilder sb = new StringBuilder(); //利用StringBuilder比使用加号更加高效
+//               Boolean first = true;
+//               if (orderDetailList != null && !orderDetailList.isEmpty()) {
+//                   for (OrderDetail orderDetail : orderDetailList) {
+//                       if (orderDetail != null && orderDetail.getName() != null) {
+//                           if (!first){
+//                               sb.append(",");
+//                           }
+//                           sb.append(orderDetail.getName());
+//                           first = false;
+//                       }
+//                   }
+//               }
+//               orderVO.setOrderDishes(sb.toString()); //sb.toString()将StringBuilder转换为最终的String
+                //方式二: 利用Stream API将订单中所有菜品名转换为字符串
+                List<String> dishNames = orderDetailList.stream().map(x -> {
+                    String dishName = x.getName() + "*" + x.getNumber() + ";";
+                    return dishName;
+                }).collect(Collectors.toList());
+
+                String orderDishStr = String.join("", dishNames);
+                orderVO.setOrderDishes(orderDishStr);
+                orderVOList.add(orderVO);
             }
         }
         return new PageResult(page.getTotal(), orderVOList);
     }
 
     /**
-     * 取消订单
+     * 商家取消订单
      * @param ordersCancelDTO
      */
     public void cancelOrder(OrdersCancelDTO ordersCancelDTO) {
-        Orders orders = Orders.builder()
-                        .id(ordersCancelDTO.getId())
-                        .status(Orders.CANCELLED)
-                        .cancelReason(ordersCancelDTO.getCancelReason())
-                        .cancelTime(LocalDateTime.now())
-                        .build();
+        //查询订单是否存在
+        Orders orders = orderMapper.getById(ordersCancelDTO.getId());
+        if (orders == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+
+        //判断订单状态是否为待支付或待接单
+        if (orders.getStatus() > 2){
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+
+        //如果订单的状态为待接单则要退款
+
+        if(orders.getStatus() == 2){
+            orders.setPayStatus(Orders.REFUND);
+        }
+
+        orders.setStatus(Orders.CANCELLED);
+        orders.setCancelReason(ordersCancelDTO.getCancelReason());
+        orders.setCancelTime(LocalDateTime.now());
 
         orderMapper.update(orders);
     }
@@ -304,11 +405,20 @@ public class OrderServiceImpl implements OrderService {
      * @param ordersRejectionDTO
      */
     public void rejectionOrder(OrdersRejectionDTO ordersRejectionDTO) {
-        Orders orders = Orders.builder()
-                .id(ordersRejectionDTO.getId())
-                .status(Orders.COMPLETED)
-                .rejectionReason(ordersRejectionDTO.getRejectionReason())
-                .build();
+
+        //查询订单是否存在
+        Orders orders = orderMapper.getById(ordersRejectionDTO.getId());
+        if (orders == null || orders.getStatus() != 2) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+
+        if (orders.getPayStatus() == 1){
+            orders.setPayStatus(Orders.REFUND);
+        }
+
+        orders.setStatus(Orders.CANCELLED);
+        orders.setRejectionReason(ordersRejectionDTO.getRejectionReason());
+        orders.setCancelTime(LocalDateTime.now());
 
         orderMapper.update(orders);
     }
@@ -331,11 +441,13 @@ public class OrderServiceImpl implements OrderService {
      * @param id
      */
     public void deliveryOrder(Long id) {
-        Orders orders = Orders.builder()
-                .id(id)
-                .status(Orders.DELIVERY_IN_PROGRESS)
-                .build();
+        //查询订单是否存在
+        Orders orders = orderMapper.getById(id);
+        if (orders == null || orders.getStatus() != 2) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
 
+        orders.setStatus(Orders.DELIVERY_IN_PROGRESS);
         orderMapper.update(orders);
     }
 
@@ -344,12 +456,14 @@ public class OrderServiceImpl implements OrderService {
      * @param id
      */
     public void completeOrder(Long id) {
-        Orders orders = Orders.builder()
-                .id(id)
-                .status(Orders.COMPLETED)
-                .deliveryTime(LocalDateTime.now())
-                .build();
+        //查询订单是否存在
+        Orders orders = orderMapper.getById(id);
+        if (orders == null || orders.getStatus() != 4) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
 
+        orders.setStatus(Orders.COMPLETED);
+        orders.setDeliveryTime(LocalDateTime.now());
         orderMapper.update(orders);
     }
 
@@ -358,6 +472,36 @@ public class OrderServiceImpl implements OrderService {
      */
     public OrderStatisticsVO getOrderStatistics() {
         return orderMapper.getOrderStatistics();
+    }
+
+    /**
+     * 用户取消订单
+     * @param orderId
+     */
+    public void cancelOrderById(Long orderId) {
+
+        //查询订单是否存在
+        Orders orders = orderMapper.getById(orderId);
+        if (orders == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+
+        //判断订单状态是否为待支付或待接单
+        if (orders.getStatus() > 2){
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+
+        //如果订单的状态为待接单则要退款
+
+        if(orders.getStatus() == 2){
+            orders.setPayStatus(Orders.REFUND);
+        }
+
+        orders.setStatus(Orders.CANCELLED);
+        orders.setCancelReason("用户取消订单");
+        orders.setCancelTime(LocalDateTime.now());
+
+        orderMapper.update(orders);
     }
 
 

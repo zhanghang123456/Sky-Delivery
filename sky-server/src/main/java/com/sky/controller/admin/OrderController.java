@@ -120,14 +120,14 @@ public class OrderController {
     }
 
     /**
-     * 拒单
+     * 接单
      * @param ordersConfirmDTO
      * @return
      */
     @PutMapping("/confirm")
-    @ApiOperation("拒单")
+    @ApiOperation("接单")
     public Result confirm(@RequestBody OrdersConfirmDTO ordersConfirmDTO) {
-        log.info("取消订单：{}", ordersConfirmDTO);
+        log.info("接单：{}", ordersConfirmDTO);
         orderService.confirmOrder(ordersConfirmDTO);
         return Result.success();
 

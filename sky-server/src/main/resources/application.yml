@@ -62,4 +62,10 @@ sky:
   wechat:
     appid: ${sky.wechat.appid}
     secret: ${sky.wechat.secret}
+  amap:
+    key: ${sky.amap.key}
+    geocode-url: ${sky.amap.geocode-url}
+    direction-url: ${sky.amap.direction-url}
+  shop:
+    address: ${sky.shop.address}
 

@@ -93,4 +93,10 @@ public interface OrderService {
      * 订单统计
      */
     OrderStatisticsVO getOrderStatistics();
+
+    /**
+     * 取消订单
+     * @param orderId
+     */
+    void cancelOrderById(Long orderId);
 }
