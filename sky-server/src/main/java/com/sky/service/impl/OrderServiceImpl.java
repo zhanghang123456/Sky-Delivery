@@ -1,6 +1,7 @@
 package com.sky.service.impl;
 
 import com.alibaba.druid.support.json.JSONUtils;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.Page;
@@ -25,6 +26,7 @@ import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import com.sky.websocket.WebSocketServer;
 import org.apache.http.entity.ContentType;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,10 +66,14 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private AmapProperties amapProperties;
 
+    @Autowired
+    private WebSocketServer webSocketServer;
+
     private static final Long DISTANCE = 5000L;
 
     /**
      * 提交订单
+     *
      * @param ordersSubmitDTO
      * @return
      */
@@ -86,17 +92,17 @@ public class OrderServiceImpl implements OrderService {
                 + addressBook.getDistrictName() + addressBook.getDetail();
         String shop_location = getGeocode(shopProperties.getAddress());
         String user_location = getGeocode(user_address);
-        if(shop_location != null && user_location != null) {
+        if (shop_location != null && user_location != null) {
             String distanceStr = getDistance(shop_location, user_location);
             if (distanceStr == null) {
                 throw new OrderBusinessException(MessageConstant.DISTANCE_EXCEEDS_LIMIT);
-            }else {
+            } else {
                 Long distance = Long.valueOf(distanceStr);
-                if (distance > DISTANCE){
+                if (distance > DISTANCE) {
                     throw new OrderBusinessException(MessageConstant.DISTANCE_EXCEEDS_LIMIT);
                 }
             }
-        }else {
+        } else {
             throw new OrderBusinessException(MessageConstant.GEOCODE_ANALYSIS_ANOMALY);
         }
 
@@ -180,7 +186,7 @@ public class OrderServiceImpl implements OrderService {
                 JSONArray paths = route.getJSONArray("paths");
                 if (paths != null && !paths.isEmpty()) {
                     JSONObject firstJsonObject = paths.getJSONObject(0);
-                    if( firstJsonObject != null){
+                    if (firstJsonObject != null) {
                         return firstJsonObject.getString("distance");
                     }
                 }
@@ -188,6 +194,7 @@ public class OrderServiceImpl implements OrderService {
         }
         return null;
     }
+
     /**
      * 订单支付
      *
@@ -246,11 +253,19 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         orderMapper.update(orders);
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("type", 1); // 1表示来单提醒, 2表示客户催单
+        map.put("orderId", orders.getId());
+        map.put("content", "订单号" + outTradeNo);
+        String jsonString = JSON.toJSONString(map);
+        webSocketServer.sendToAllClient(jsonString);
     }
 
 
     /**
      * 分页查询订单
+     *
      * @param ordersPageQueryDTO
      * @return
      */
@@ -261,7 +276,7 @@ public class OrderServiceImpl implements OrderService {
         Page<Orders> page = orderMapper.userPageQuery(ordersPageQueryDTO);
 
         List<OrderVO> orderVOList = new ArrayList<>();
-        if(page != null && !page.isEmpty()) {
+        if (page != null && !page.isEmpty()) {
             for (Orders orders : page) {
                 OrderVO orderVO = new OrderVO();
                 BeanUtils.copyProperties(orders, orderVO);
@@ -276,6 +291,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 根据订单id查询订单详情
+     *
      * @param id
      * @return
      */
@@ -291,6 +307,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 再来一单
+     *
      * @param id
      */
     @Transactional
@@ -328,6 +345,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 管理员查询订单
+     *
      * @param ordersPageQueryDTO
      * @return
      */
@@ -336,7 +354,7 @@ public class OrderServiceImpl implements OrderService {
         Page<Orders> page = orderMapper.adminPageQuery(ordersPageQueryDTO);
 
         List<OrderVO> orderVOList = new ArrayList<>();
-        if(page != null && !page.isEmpty()) {
+        if (page != null && !page.isEmpty()) {
             for (Orders orders : page) {
                 OrderVO orderVO = new OrderVO();
                 BeanUtils.copyProperties(orders, orderVO);
@@ -373,6 +391,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 商家取消订单
+     *
      * @param ordersCancelDTO
      */
     public void cancelOrder(OrdersCancelDTO ordersCancelDTO) {
@@ -383,13 +402,13 @@ public class OrderServiceImpl implements OrderService {
         }
 
         //判断订单状态是否为待支付或待接单
-        if (orders.getStatus() > 2){
+        if (orders.getStatus() > 2) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
 
         //如果订单的状态为待接单则要退款
 
-        if(orders.getStatus() == 2){
+        if (orders.getStatus() == 2) {
             orders.setPayStatus(Orders.REFUND);
         }
 
@@ -402,6 +421,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 拒单
+     *
      * @param ordersRejectionDTO
      */
     public void rejectionOrder(OrdersRejectionDTO ordersRejectionDTO) {
@@ -412,7 +432,7 @@ public class OrderServiceImpl implements OrderService {
             throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         }
 
-        if (orders.getPayStatus() == 1){
+        if (orders.getPayStatus() == 1) {
             orders.setPayStatus(Orders.REFUND);
         }
 
@@ -425,6 +445,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 接单
+     *
      * @param ordersConfirmDTO
      */
     public void confirmOrder(OrdersConfirmDTO ordersConfirmDTO) {
@@ -438,6 +459,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 派送订单
+     *
      * @param id
      */
     public void deliveryOrder(Long id) {
@@ -453,6 +475,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 完成订单
+     *
      * @param id
      */
     public void completeOrder(Long id) {
@@ -476,6 +499,7 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 用户取消订单
+     *
      * @param orderId
      */
     public void cancelOrderById(Long orderId) {
@@ -487,13 +511,13 @@ public class OrderServiceImpl implements OrderService {
         }
 
         //判断订单状态是否为待支付或待接单
-        if (orders.getStatus() > 2){
+        if (orders.getStatus() > 2) {
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
 
         //如果订单的状态为待接单则要退款
 
-        if(orders.getStatus() == 2){
+        if (orders.getStatus() == 2) {
             orders.setPayStatus(Orders.REFUND);
         }
 
@@ -504,5 +528,31 @@ public class OrderServiceImpl implements OrderService {
         orderMapper.update(orders);
     }
 
+    /**
+     * 催单
+     *
+     * @param id
+     */
+    public void reminderOrder(Long id) {
+        Orders orders = orderMapper.getById(id);
+
+        if (orders == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+
+        if (orders.getStatus() != 2) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("type", 2); // 1表示来单提醒, 2表示客户催单
+        map.put("orderId", id);
+        map.put("content", "订单号" + orders.getNumber());
+        String jsonString = JSON.toJSONString(map);
+        webSocketServer.sendToAllClient(jsonString);
+    }
 
 }
+
+
+
