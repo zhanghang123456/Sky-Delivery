@@ -89,4 +89,35 @@
         </where>
     </select>
 
+    <select id="sumOrderCountByMap" resultType="Integer">
+        select count(id) from orders
+        <where>
+            <if test = "beginTime != null">
+                and order_time &gt;= #{beginTime}
+            </if>
+            <if test= "endTime != null">
+                and order_time &lt;= #{endTime}
+            </if>
+            <if test= "status != null">
+                and status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <select id="salesTop10Statistics" resultType="com.sky.dto.GoodsSalesDTO">
+        select od.name, sum(od.number) as number from orders as o left outer join order_detail as od on o.id = od.order_id
+        <where>
+            <if test = "beginTime != null">
+                and o.order_time &gt;= #{beginTime}
+            </if>
+            <if test= "endTime != null">
+                and o.order_time &lt;= #{endTime}
+            </if>
+            <if test= "status != null">
+                and o.status = #{status}
+            </if>
+        </where>
+        group by od.name order by number desc limit 0,10
+    </select>
+
 </mapper>

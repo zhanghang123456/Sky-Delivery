@@ -465,7 +465,7 @@ public class OrderServiceImpl implements OrderService {
     public void deliveryOrder(Long id) {
         //查询订单是否存在
         Orders orders = orderMapper.getById(id);
-        if (orders == null || orders.getStatus() != 2) {
+        if (orders == null || orders.getStatus() != 3) {
             throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         }
 
