@@ -4,19 +4,19 @@
 苍穹外卖是一个餐饮外卖平台的后端服务系统，提供商家管理、菜品展示、购物车管理、订单处理及配送状态追踪等核心功能，支持多角色用户（顾客、商家、管理员）协同操作。
 
 ## 技术栈
-- **核心框架**: Spring Boot 2.7.18
-- **Java版本**: JDK 17
+- **核心框架**: Spring Boot
+- **Java版本**: JDK 11
 - **数据库**: 
   - MySQL 8.0 (主数据存储)
   - Redis 7.x (缓存和会话管理)
-- **持久层**: MyBatis-Plus 3.5.5
-- **安全框架**: Spring Security + JWT
+- **持久层**: MyBatis 3.5.5
 - **其他组件**: 
   - Lombok (简化代码)
   - Swagger (API文档)
   - Spring Data Redis
   - Spring Task (定时任务)
   - Apache POI (Excel操作)
+  - Jwt (无状态认证)
 
 ---
 
