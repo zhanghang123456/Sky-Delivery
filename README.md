@@ -27,21 +27,6 @@
 2. Redis 7.x ([下载地址](https://redis.io/download))
 3. JDK 11 ([下载地址](https://www.oracle.com/java/technologies/downloads/))
 
-### 数据库初始化
-1. 创建数据库：
-   ```sql
-   CREATE DATABASE sky_takeout CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
-2. 执行初始化脚本：[schema.sql](./sql/schema.sql)
-   ```bash
-   mysql -u root -p sky_takeout < sql/schema.sql
-   ```
-3. 导入示例数据（可选）：[data.sql](./sql/data.sql)
-   ```bash
-   mysql -u root -p sky_takeout < sql/data.sql
-   ```
-
-
 
 ## API接口说明
 通过 Swagger 查看完整接口文档：  
