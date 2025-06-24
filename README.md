@@ -9,7 +9,7 @@
 - **数据库**: 
   - MySQL 8.0 (主数据存储)
   - Redis 7.x (缓存和会话管理)
-- **持久层**: MyBatis 3.5.5
+- **持久层**: MyBatis
 - **其他组件**: 
   - Lombok (简化代码)
   - Swagger (API文档)
